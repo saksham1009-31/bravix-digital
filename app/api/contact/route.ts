@@ -90,7 +90,15 @@ export async function POST(request: Request) {
       }),
     });
 
-    const data = await web3formsResponse.json();
+    let data;
+    try {
+      data = await web3formsResponse.json();
+    } catch {
+      data = {
+        success: false,
+        message: "Unexpected response received from Web3Forms service.",
+      };
+    }
 
     if (!web3formsResponse.ok || !data.success) {
       return NextResponse.json(

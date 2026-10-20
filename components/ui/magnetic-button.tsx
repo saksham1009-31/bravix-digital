@@ -28,6 +28,7 @@ export const MagneticButton = React.forwardRef<HTMLElement, MagneticButtonProps>
 
     useEffect(() => {
       if (typeof window === "undefined") return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const element = localRef.current;
       if (!element) return;
 

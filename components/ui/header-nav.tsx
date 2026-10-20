@@ -17,6 +17,30 @@ export function HeaderNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close mobile navigation on Escape key or when window resizes to desktop breakpoint
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [mobileMenuOpen]);
+
   const navLinks = [
     { label: "Home", href: "#top" },
     { label: "Services", href: "#services" },
@@ -71,6 +95,8 @@ export function HeaderNav() {
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           className="md:hidden p-1.5 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="Toggle navigation menu"
+          aria-expanded={mobileMenuOpen}
+          aria-controls="mobile-navigation"
         >
           {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
@@ -78,7 +104,12 @@ export function HeaderNav() {
 
       {/* Mobile Dropdown Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden mt-2 p-5 rounded-3xl border border-border/60 bg-background/95 backdrop-blur-2xl shadow-2xl flex flex-col gap-4 animate-in fade-in slide-in-from-top-2">
+        <div
+          id="mobile-navigation"
+          role="region"
+          aria-label="Mobile Navigation"
+          className="md:hidden mt-2 p-5 rounded-3xl border border-border/60 bg-background/95 backdrop-blur-2xl shadow-2xl flex flex-col gap-4 animate-in fade-in slide-in-from-top-2"
+        >
           {navLinks.map((link) => (
             <a
               key={link.label}

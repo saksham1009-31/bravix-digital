@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Code,
   Layout,
@@ -148,6 +148,25 @@ export function AgencySections() {
   const [selectedService, setSelectedService] = useState<string>("Website Design & Development");
   const [activeModalProject, setActiveModalProject] = useState<ProjectItem | null>(null);
 
+  // Lock body scroll and listen for Escape key when project modal is active
+  useEffect(() => {
+    if (!activeModalProject) return;
+
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveModalProject(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeModalProject]);
+
   // Form State
   const [formData, setFormData] = useState({
     name: "",
@@ -195,9 +214,15 @@ export function AgencySections() {
     }
 
     try {
-      const accessKey =
-        process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY?.trim() ||
-        "f41daa70-2124-4462-8146-0b8e8006be71";
+      const accessKey = process.env.NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY?.trim();
+
+      if (!accessKey) {
+        setFormStatus("error");
+        setFormFeedback(
+          "Contact form configuration incomplete. Please configure NEXT_PUBLIC_WEB3FORMS_ACCESS_KEY in .env.local."
+        );
+        return;
+      }
 
       const response = await fetch("https://api.web3forms.com/submit", {
         method: "POST",
@@ -218,7 +243,12 @@ export function AgencySections() {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        data = { success: false, message: "Unexpected response from form server." };
+      }
 
       if (response.ok && data.success) {
         setFormStatus("success");
@@ -499,12 +529,15 @@ export function AgencySections() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                    <label htmlFor="contact-name" className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
                       Your Name <span className="text-[#FF4D00]">*</span>
                     </label>
                     <input
+                      id="contact-name"
+                      name="name"
                       type="text"
                       required
+                      autoComplete="name"
                       placeholder="Jane Doe"
                       value={formData.name}
                       onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -513,12 +546,15 @@ export function AgencySections() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                    <label htmlFor="contact-email" className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
                       Your Email <span className="text-[#FF4D00]">*</span>
                     </label>
                     <input
+                      id="contact-email"
+                      name="email"
                       type="email"
                       required
+                      autoComplete="email"
                       placeholder="jane@company.com"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -529,10 +565,12 @@ export function AgencySections() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                    <label htmlFor="contact-project-type" className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
                       Project Type <span className="text-[#FF4D00]">*</span>
                     </label>
                     <select
+                      id="contact-project-type"
+                      name="projectType"
                       value={formData.projectType}
                       onChange={(e) => setFormData({ ...formData, projectType: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background text-foreground text-sm focus:outline-none focus:border-[#FF4D00] transition-colors"
@@ -546,10 +584,12 @@ export function AgencySections() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                    <label htmlFor="contact-budget" className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
                       Budget Range (Optional)
                     </label>
                     <select
+                      id="contact-budget"
+                      name="budget"
                       value={formData.budget}
                       onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
                       className="w-full px-4 py-3 rounded-xl border border-border/60 bg-background text-foreground text-sm focus:outline-none focus:border-[#FF4D00] transition-colors"
@@ -564,10 +604,12 @@ export function AgencySections() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
+                  <label htmlFor="contact-message" className="block text-xs font-mono uppercase tracking-wider text-muted-foreground mb-2">
                     Project Description <span className="text-[#FF4D00]">*</span>
                   </label>
                   <textarea
+                    id="contact-message"
+                    name="message"
                     required
                     rows={4}
                     placeholder="Tell us about your brand, project goals, timeline, and key requirements..."
@@ -579,14 +621,22 @@ export function AgencySections() {
 
                 {/* Status Feedback */}
                 {formStatus === "success" && (
-                  <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm flex items-start gap-3">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-sm flex items-start gap-3"
+                  >
                     <CheckCircle2 className="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <span>{formFeedback}</span>
                   </div>
                 )}
 
                 {formStatus === "error" && (
-                  <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm flex items-start gap-3">
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="p-4 rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 text-sm flex items-start gap-3"
+                  >
                     <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <span>{formFeedback}</span>
                   </div>
@@ -596,7 +646,8 @@ export function AgencySections() {
                   as="button"
                   type="submit"
                   disabled={formStatus === "submitting"}
-                  className="magnetic-glass-pill w-full py-4 rounded-full text-foreground font-bold text-sm tracking-wide flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 group shadow-lg"
+                  aria-busy={formStatus === "submitting"}
+                  className="magnetic-glass-pill w-full py-4 rounded-full text-foreground font-bold text-sm tracking-wide flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed group shadow-lg"
                 >
                   {formStatus === "submitting" ? (
                     <>
@@ -620,10 +671,16 @@ export function AgencySections() {
           5. PROJECT MODAL DRAWER
       ====================================================================== */}
       {activeModalProject && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-project-title"
+          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4"
+        >
           <div className="relative w-full max-w-2xl bg-card border border-border rounded-3xl p-8 shadow-2xl animate-in fade-in zoom-in-95 max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setActiveModalProject(null)}
+              aria-label="Close project modal"
               className="absolute top-6 right-6 p-2 rounded-full border border-border/60 text-muted-foreground hover:text-foreground hover:bg-foreground/5 transition-colors"
             >
               <X className="w-5 h-5" />
@@ -632,7 +689,7 @@ export function AgencySections() {
             <span className="text-xs font-mono font-bold tracking-widest text-[#FF4D00] uppercase">
               {activeModalProject.badge} · {activeModalProject.category}
             </span>
-            <h3 className="text-3xl font-black mt-2 mb-4">{activeModalProject.title}</h3>
+            <h3 id="modal-project-title" className="text-3xl font-black mt-2 mb-4">{activeModalProject.title}</h3>
 
             <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
               <p className="text-base text-foreground font-light">
